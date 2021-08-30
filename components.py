@@ -42,9 +42,7 @@ def _parse_command_line() -> argparse.Namespace:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "project",
-        help="The path to the Python project.",
-        default=".",
+        "project", help="The path to the Python project.", default=".",
     )
     arguments = parser.parse_args()
     arguments.project = os.path.abspath(os.path.expanduser(arguments.project))
@@ -70,14 +68,19 @@ def _get_python_files(root_path: str) -> list:
 
 
 def _get_imports(python_file: str) -> list:
-    as_expression = re.compile(r"\s+as.*$")
+    import_expression = re.compile(r"^(?:import|from)\s+([^\s]+)")
     with open(python_file, "r") as f:
         lines = [
-            re.sub(as_expression, "", line.strip().replace("import ", ""))
+            line
             for line in f.readlines()
-            if line.startswith("import")
+            if line.startswith("import ") or line.startswith("from ")
         ]
-    return lines
+    imports = []
+    for line in lines:
+        match = import_expression.match(line)
+        if match:
+            imports.append(match[1])
+    return imports
 
 
 def _filter_imports(imports: list, modules: list) -> None:

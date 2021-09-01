@@ -4,8 +4,8 @@
 import argparse
 import glob
 import os.path
-from pprint import pprint
 import re
+import sys
 
 
 def main() -> None:
@@ -18,7 +18,11 @@ def main() -> None:
     for module in modules:
         module.dependencies = _filter_imports(_get_imports(module), module_names)
     modules = [module for module in modules if _include_module(module)]
-    _write_component_diagram(modules)
+    if arguments.output_file:
+        with open(arguments.output_file, "w") as plantuml_file:
+            _write_component_diagram(modules, plantuml_file)
+    else:
+        _write_component_diagram(modules, sys.stdout)
 
 
 class _Module:
@@ -52,6 +56,11 @@ def _parse_command_line() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate a dependency graph for a Python project.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output-file",
+        help="Write the PlantUML text to this file. If you omit this, the application writes the "
+        "PlantUML text to standard output.",
     )
     parser.add_argument(
         "project", help="The path to the Python project.", default=".",
@@ -122,12 +131,19 @@ def _filter_imports(imports: list, modules: list) -> None:
     return local_imports
 
 
-def _write_component_diagram(modules: list) -> None:
-    with open("component_diagram.puml", "w") as plantuml_file:
-        plantuml_file.writelines(["@startuml\n", "skinparam linetype ortho\n"])
-        _write_module_to_diagram(modules, plantuml_file)
-        _write_dependencies_to_diagram(modules, plantuml_file)
-        plantuml_file.write("@enduml")
+def _write_component_diagram(modules: list, plantuml_file) -> None:
+    """
+    Write the PlantUML file.
+
+    Args:
+        modules (list): The list of Python modules to include in the diagram.
+        plantuml_file: The destination stream for the PlantUML code. This should be an open file
+            stream, or a system stream such as ``sys.stdout``.
+    """
+    plantuml_file.writelines(["@startuml\n", "skinparam linetype ortho\n"])
+    _write_module_to_diagram(modules, plantuml_file)
+    _write_dependencies_to_diagram(modules, plantuml_file)
+    plantuml_file.write("@enduml")
 
 
 def _write_module_to_diagram(modules: list, plantuml_file) -> None:

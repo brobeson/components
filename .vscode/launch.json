@@ -6,6 +6,8 @@
       "request": "launch",
       "module": "components",
       "args": [
+        "--output-file",
+        "test.puml",
         "~/repositories/tmft"
       ]
     }

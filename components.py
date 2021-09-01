@@ -5,6 +5,7 @@ import argparse
 import glob
 import os.path
 import re
+import subprocess
 import sys
 
 
@@ -23,6 +24,8 @@ def main() -> None:
             _write_component_diagram(modules, plantuml_file)
     else:
         _write_component_diagram(modules, sys.stdout)
+    if arguments.image_type:
+        _run_plantuml(arguments.output_file, arguments.image_type)
 
 
 class _Module:
@@ -63,9 +66,24 @@ def _parse_command_line() -> argparse.Namespace:
         "PlantUML text to standard output.",
     )
     parser.add_argument(
+        "--image-type",
+        help="Run PlantUML and write an image of this type. See the PlantUML documentation for "
+        "a list of acceptable types (https://plantuml.com/command-line#458de91d76a8569c). You just "
+        "need to use the format acronym, such as '--image-type=png' or '--image-type=scxml'. This "
+        "option requires --output-file.",
+    )
+    parser.add_argument(
         "project", help="The path to the Python project.", default=".",
     )
     arguments = parser.parse_args()
+    if arguments.output_file:
+        arguments.output_file = os.path.abspath(
+            os.path.expanduser(arguments.output_file)
+        )
+    if arguments.image_type:
+        if not arguments.output_file:
+            sys.exit("Using --image-type requires also using --output-file.")
+        arguments.image_type = arguments.image_type.lower()
     arguments.project = os.path.abspath(os.path.expanduser(arguments.project))
     if arguments.project[-1] != "/":
         arguments.project = arguments.project + "/"
@@ -165,6 +183,26 @@ def _write_dependencies_to_diagram(modules: list, plantuml_file) -> None:
 
 def _include_module(module: _Module) -> None:
     return module.name != "__init__" or module.dependencies
+
+
+def _run_plantuml(plantuml_file: str, image_type: str) -> None:
+    """
+    Run PlantUML to generate the final diagram.
+
+    Arguments:
+        plantuml_file (str): The path to the input file for PlantUML.
+        image_type (str): The type of image for PlantUML to generate.
+    """
+    subprocess.run(
+        [
+            "plantuml",
+            "-t" + image_type,
+            "-output",
+            os.path.dirname(plantuml_file),
+            plantuml_file,
+        ],
+        check=True,
+    )
 
 
 if __name__ == "__main__":

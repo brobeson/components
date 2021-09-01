@@ -8,6 +8,8 @@
       "args": [
         "--output-file",
         "test.puml",
+        "--image-type",
+        "png",
         "~/repositories/tmft"
       ]
     }
